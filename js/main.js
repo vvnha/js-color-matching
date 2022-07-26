@@ -1,4 +1,4 @@
-import { GAME_STATUS, PAIRS_COUNT } from './constants.js'
+import { GAME_STATUS, GAME_TIME, PAIRS_COUNT } from './constants.js'
 import {
   getColorElementList,
   getColorListElement,
@@ -6,6 +6,7 @@ import {
   getPlayAgainButton,
 } from './selectors.js'
 import {
+  createTimer,
   getRandomColorPairs,
   hidePlayAgainButton,
   setTimerText,
@@ -15,8 +16,21 @@ import {
 // Global variables
 let selections = []
 let gameStatus = GAME_STATUS.PLAYING
-let timerSecond = 0
-const limitTime = 20
+const timer = createTimer({
+  seconds: GAME_TIME,
+  onChange: handleSecondChange,
+  onFinish: handleSecondFinish,
+})
+
+function handleSecondChange(second) {
+  setTimerText(second)
+}
+
+function handleSecondFinish() {
+  setTimerText('YOU LOSE!')
+  gameStatus = GAME_STATUS.FINISHED
+  showPlayAgainButton()
+}
 
 function initColorElement() {
   // get 8 color pairs
@@ -41,9 +55,8 @@ function checkWin() {
 function handleClickLiColorElement(liElement) {
   const shoudlBlockClick = [GAME_STATUS.BLOCKING, GAME_STATUS.FINISHED].includes(gameStatus)
   const isClicked = liElement.classList.contains('active')
-  const isEndedTime = timerSecond >= limitTime
 
-  if (!liElement || isEndedTime || isClicked || shoudlBlockClick) return
+  if (!liElement || isClicked || shoudlBlockClick) return
 
   liElement.classList.add('active')
   selections.push(liElement)
@@ -61,6 +74,8 @@ function handleClickLiColorElement(liElement) {
       showPlayAgainButton()
       //show you win
       setTimerText('YOU WIN!')
+      //clear count down
+      timer.clear()
     }
     selections = []
     return
@@ -72,7 +87,10 @@ function handleClickLiColorElement(liElement) {
     selections[0].classList.remove('active')
     selections[1].classList.remove('active')
     selections = []
-    gameStatus = GAME_STATUS.PLAYING
+    console.log(gameStatus)
+    if (gameStatus !== GAME_STATUS.FINISHED) {
+      gameStatus = GAME_STATUS.PLAYING
+    }
   }, 500)
 }
 
@@ -92,7 +110,7 @@ function attachEventForColorList() {
 
 function handleClickLReplayButton() {
   resetGame('')
-  checkTimeOut()
+  startTimer()
 }
 
 function attachEventForReplayButton() {
@@ -108,7 +126,6 @@ function attachEventForReplayButton() {
 function resetGame(text) {
   selections = []
   gameStatus = GAME_STATUS.PLAYING
-  timerSecond = 0
 
   const colorElementList = getColorElementList()
 
@@ -121,30 +138,15 @@ function resetGame(text) {
   setTimerText(text)
 }
 
-function checkTimeOut() {
-  let timeoutId
-
-  if (gameStatus === GAME_STATUS.PLAYING) {
-    timeoutId = setInterval(() => {
-      if (timerSecond <= limitTime) {
-        if (gameStatus !== GAME_STATUS.FINISHED) setTimerText(limitTime - timerSecond)
-      } else {
-        gameStatus === GAME_STATUS.FINISHED
-        clearInterval(timeoutId)
-        setTimerText('YOU LOSE!')
-        showPlayAgainButton()
-      }
-
-      timerSecond++
-    }, 1000)
-  }
+function startTimer() {
+  timer.start()
 }
 
 ;(() => {
   initColorElement()
   attachEventForColorList()
   attachEventForReplayButton()
-  checkTimeOut()
+  startTimer()
 })()
 
 // TODOs
